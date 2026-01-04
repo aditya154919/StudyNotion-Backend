@@ -11,61 +11,7 @@ const {
 const { paymentSuccessEmail } = require("../mail-template/paymentSuccess");
 const { instructorEnrollmentEmail } = require("../mail-template/instructorenrollmail");
 
-//razorpay order
-// exports.capturePayment = async (req, res) => {
-//   console.log("req.body",req.body);
-//   const { courses } = req.body;
-//   const userId = req.userId;
 
-//   let totalAmount = 0;
-//   for (const course_id of courses) {
-//     let course;
-//     try {
-//       course = await Course.findById(course_id);
-//       if (!course) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "Please provide course id",
-//         });
-//       }
-
-//       const uid = new mongoose.Types.ObjectId(userId);
-//       if (course.studentEnrolled.includes(uid)) {
-//         return res.status(200).json({
-//           success: false,
-//           message: "Student already enrolled",
-//         });
-//       }
-//       totalAmount += course.price;
-//     } catch (error) {
-//       console.log("Error", error);
-//       return res.status(500).json({
-//         success: false,
-//         message: "Server error",
-//       });
-//     }
-
-//     const option = {
-//       amount: totalAmount * 100,
-//       currency: "INR",
-//       receipt: Math.random(Date.now()).toString(),
-//     };
-//   }
-
-//   try {
-//     const paymentResponse = await instance.orders.create(option);
-//     res.json({
-//       success: true,
-//       message: paymentResponse,
-//     });
-//   } catch (error) {
-//     console.log("Error", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error during creating order",
-//     });
-//   }
-// };
 
 exports.capturePayment = async (req, res) => {
   try {
@@ -75,7 +21,7 @@ exports.capturePayment = async (req, res) => {
     console.log("hello", courses);
     const userId = req.userId;
 
-    // ✅ validation
+    
     if (!courses || !Array.isArray(courses) || courses.length === 0) {
       return res.status(400).json({
         success: false,
@@ -106,7 +52,7 @@ exports.capturePayment = async (req, res) => {
       totalAmount += course.price;
     }
 
-    // ✅ create order AFTER loop
+   
     const options = {
       amount: totalAmount * 100, // paise
       currency: "INR",
@@ -246,7 +192,7 @@ const enrollStudents = async (courses, userId, res) => {
       });
     }
 
-    // ✅ normalize courseIds
+    
     const courseIds = courses.map((item) =>
       typeof item === "string" ? item : item.courseId
     );
@@ -290,7 +236,6 @@ const enrollStudents = async (courses, userId, res) => {
       );
     }
 
-    // ✅ SEND RESPONSE ONCE
     return true;
   } catch (error) {
     console.error("Enroll error:", error.message);

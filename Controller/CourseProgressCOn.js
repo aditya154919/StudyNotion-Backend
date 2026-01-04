@@ -4,7 +4,7 @@ const SubSection = require("../modules/SubSection");
 
 exports.updatedCourseProgress = async(req,res)=>{
     const {courseId,subSectionId} = req.body;
-    console.log("hello",req.body)
+    // console.log("hello",req.body)
     const userId = req.userId;
     try {
         //check valid subsection

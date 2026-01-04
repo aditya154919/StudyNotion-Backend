@@ -6,9 +6,9 @@ exports.createRatingAndReview = async (req, res) => {
   try {
     const userId = req.userId;
     const { courseId, rating, review } = req.body;
-    console.log("Rating", req.body);
-    console.log("user", req.userId);
-    console.log("Type of userId:", typeof req.userId);
+    // console.log("Rating", req.body);
+    // console.log("user", req.userId);
+    // console.log("Type of userId:", typeof req.userId);
     // const user = await User.findById(userId);
     const courseDetails = await Course.findOne({
       _id: courseId,

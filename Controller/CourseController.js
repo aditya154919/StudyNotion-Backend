@@ -3,7 +3,7 @@ const User = require("../modules/User");
 const Tag = require("../modules/Tag");
 const { uploadImageToCloudinary } = require("../utils/imageUploder");
 const Course = require("../modules/Course");
-const { data } = require("react-router");
+
 const path = require("path");
 const Section = require("../modules/Section");
 const SubSection = require("../modules/SubSection");
@@ -15,7 +15,7 @@ exports.createCourse = async (req, res) => {
   try {
     console.log("Body Requesr", req.body);
     const userId = req.userId;
-    console.log("User", userId);
+    // console.log("User", userId);
     console.log(req.files);
     let {
       courseName,

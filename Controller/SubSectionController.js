@@ -1,4 +1,4 @@
-const { data } = require("react-router");
+
 const Section = require("../modules/Section");
 const SubSection = require("../modules/SubSection");
 const { uploadImageToCloudinary } = require("../utils/imageUploder");

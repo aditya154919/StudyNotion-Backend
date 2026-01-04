@@ -1,4 +1,5 @@
 const express = require("express");
+const router = express.Router();
 const { createTag, getAllTags, tagPageDetals } = require("../Controller/TagController");
 const { authMiddleware, isAdmin, isInstructor, isStudents } = require("../middleware/auth");
 const {
@@ -19,7 +20,7 @@ const { createSubSection, deleteSubSection, updateSubSection } = require("../Con
 const { createRatingAndReview, getAllRating } = require("../Controller/RatingAndReview");
 const { updatedCourseProgress } = require("../Controller/CourseProgressCOn");
 
-const router = express.Router();
+
 
 router.post("/createTag", authMiddleware, isAdmin, createTag);
 router.get("/getAllTag", getAllTags);

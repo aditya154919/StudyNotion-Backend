@@ -2,7 +2,7 @@ const path = require("path");
 const Course = require("../modules/Course");
 const Section = require("../modules/Section");
 const SubSection = require("../modules/SubSection");
-const { data } = require("react-router");
+
 
 exports.createSection = async (req, res) => {
   try {

@@ -1,4 +1,4 @@
-import IMG from "../public/assets/rzp_logo.png"
+
 exports.contactUsEmail = (
     email,
     firstname,
@@ -76,7 +76,7 @@ exports.contactUsEmail = (
     <body>
         <div class="container">
             <a href="https://study-notion-frontend-zeta.vercel.app/"><img class="logo"
-                    src=${IMG} alt="StudyNotion Logo"></a>
+                    src="https://mir-s3-cdn-cf.behance.net/projects/404/67d69d240373459.Y3JvcCwxMjI3LDk2MCwzNDYsMA.png" alt="StudyNotion Logo"></a>
             <div class="message">Contact Form Confirmation</div>
             <div class="body">
                 <p>Dear ${firstname} ${lastname},</p>

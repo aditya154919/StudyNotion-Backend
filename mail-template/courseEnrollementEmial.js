@@ -1,4 +1,4 @@
-import IMG from "../public/assets/rzp_logo.png"
+
 exports.courseEnrollmentEmail = (courseName, name) => {
   return `<!DOCTYPE html>
     <html>
@@ -67,7 +67,7 @@ exports.courseEnrollmentEmail = (courseName, name) => {
     
     <body>
         <div class="container">
-            <a href="https://study-notion-frontend-zeta.vercel.app/"><img class="logo" src=${IMG}
+            <a href="https://study-notion-frontend-zeta.vercel.app/"><img class="logo" src="https://mir-s3-cdn-cf.behance.net/projects/404/67d69d240373459.Y3JvcCwxMjI3LDk2MCwzNDYsMA.png"
                     alt="StudyNotion Logo"></a>
             <div class="message">Course Registration Confirmation</div>
             <div class="body">

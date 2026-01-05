@@ -1,4 +1,4 @@
-
+import IMG from "../public/assets/rzp_logo.png"
 exports.paymentSuccessEmail = (name, amount, orderId, paymentId) => {
 
     return `<!DOCTYPE html>
@@ -69,7 +69,7 @@ exports.paymentSuccessEmail = (name, amount, orderId, paymentId) => {
       
       <body>
           <div class="container">
-              <a href="https://study-notion-frontend-zeta.vercel.app/"><img class="logo" src="https://i.ibb.co/7Xyj3PC/logo.png"
+              <a href="https://study-notion-frontend-zeta.vercel.app/"><img class="logo" src=${IMG}
                       alt="StudyNotion Logo"></a>
               <div class="message">Course Payment Confirmation</div>
               <div class="body">

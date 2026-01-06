@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://study-notion-frontend-zeta.vercel.app"
+  "https://study-notion-frontend-zeta.vercel.app/"
 ];
 
 app.use(cors({

@@ -226,7 +226,7 @@ const enrollStudents = async (courses, userId, res) => {
         { new: true }
       );
       console.log("Enrolled student: ", enrolledStudent)
-      await mailSender(
+      await mailSender.sendEmail(
         enrolledStudent.email,
         "Successfully Enrolled",
         courseEnrollmentEmail(
@@ -265,7 +265,7 @@ exports.sendMailSuccsee = async (req, res) => {
     const course = enrolledStudent.courses[0];
     const instructor = course.instructor;
 
-    await mailSender(
+    await mailSender.sendEmail(
       enrolledStudent.email,
       `Payment Recived`,
       paymentSuccessEmail(
@@ -276,7 +276,7 @@ exports.sendMailSuccsee = async (req, res) => {
       )
     );
 
-    await mailSender(
+    await mailSender.sendEmail(
       instructor.email,
       "New Student Enrolled 🎉",
       instructorEnrollmentEmail(

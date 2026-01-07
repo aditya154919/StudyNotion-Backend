@@ -11,6 +11,7 @@ const { PassThrough } = require("stream");
 const Session = require("../modules/Session");
 const crypto = require("crypto");
 const passwordResetOtpTemplate = require("../mail-template/OTPVERIFY");
+const { SendSmtpEmail } = require("@getbrevo/brevo");
 
 exports.signUp = async (req, res) => {
   try {
@@ -65,7 +66,7 @@ exports.signUp = async (req, res) => {
 
     const htmlToSend = template({ token });
 
-    mailSender(email, "Verifify Your Account", htmlToSend);
+    mailSender.sendEmail(email, "Verifify Your Account", htmlToSend);
     user.token = token;
     await user.save();
 
@@ -299,7 +300,7 @@ exports.forgotPassword = async(req,res) =>{
 
    
 
-    await mailSender(email,"Password Reset",
+    await mailSender.sendEmail(email,"Password Reset",
       passwordResetOtpTemplate(otp,user.firstName)
     )
 

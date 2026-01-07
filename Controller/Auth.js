@@ -4,14 +4,10 @@ const bcrypt = require("bcrypt");
 const mailSender = require("../utils/mailSender");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const fs = require("fs");
-const path = require("path");
-const handlebars = require("handlebars");
-const { PassThrough } = require("stream");
 const Session = require("../modules/Session");
-const crypto = require("crypto");
 const passwordResetOtpTemplate = require("../mail-template/OTPVERIFY");
-const { SendSmtpEmail } = require("@getbrevo/brevo");
+const { verify } = require("../mail-template/verificationlink");
+
 
 exports.signUp = async (req, res) => {
   try {
@@ -57,16 +53,9 @@ exports.signUp = async (req, res) => {
       expiresIn: "7d",
     });
 
-    const templatePath = path.join(
-      __dirname,
-      "../mail-template/verificationlink.hbs"
-    );
-    const source = fs.readFileSync(templatePath, "utf8");
-    const template = handlebars.compile(source);
+    
 
-    const htmlToSend = template({ token });
-
-    mailSender.sendEmail(email, "Verifify Your Account", htmlToSend);
+    mailSender.sendEmail(email, "Verifify Your Account",verify(token));
     user.token = token;
     await user.save();
 

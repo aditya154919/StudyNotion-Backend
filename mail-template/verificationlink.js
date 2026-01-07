@@ -32,7 +32,7 @@ exports.verify = (token) => { return `
 
         <p style="text-align: center;">
           <a
-            href="https://study-notion-frontend-zeta.vercel.app/verify/${token}"
+            href="https://study-notion-frontend-zeta.vercel.app/#/verify/${token}"
             target="_blank"
             class="button"
           >

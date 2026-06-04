@@ -1,23 +1,31 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
-const axios = require("axios")
-
+const axios = require("axios");
 
 const sendEmail = async (to, subject, htmlContent) => {
   try {
-    await fetch("https://api.brevo.com/v3/smtp/email", {
+    console.log("TO:", to);
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "api-key": process.env.BREVO_API_KEY,
       },
       body: JSON.stringify({
-        sender: { email: process.env.SENDER_EMAIL, name: "StudyNoton" },
+        sender: {
+          email: process.env.SENDER_EMAIL,
+          name: "StudyNotion",
+        },
         to: [{ email: to }],
         subject,
         htmlContent,
       }),
     });
+
+    const data = await response.json();
+
+    console.log("Status:", response.status);
+    console.log("Brevo:", data);
     console.log(`Email sent to ${to}`);
   } catch (err) {
     console.error(" Email failed:", err.message);
@@ -27,17 +35,21 @@ const sendEmail = async (to, subject, htmlContent) => {
 let transporter;
 const isProduction = process.env.NODE_ENV === "production";
 
-console.log(`📦 Mail mode: ${isProduction ? "BREVO API (production)" : "SMTP (local)"}`);
+console.log(
+  `📦 Mail mode: ${isProduction ? "BREVO API (production)" : "SMTP (local)"}`,
+);
 
-if(isProduction){
+if (isProduction) {
   transporter = {
-   
-    sendEmail: async({to,subject,html,text})=>{
+    sendEmail: async ({ to, subject, html, text }) => {
       try {
         await axios.post(
           "https://api.brevo.com/v3/smtp/email",
           {
-            sender: { name: "StudyNoton support", email: process.env.SMTP_USER },
+            sender: {
+              name: "StudyNoton support",
+              email: process.env.SMTP_USER,
+            },
             to: [{ email: to }],
             subject,
             htmlContent: html || `<p>${text}</p>`,
@@ -48,17 +60,18 @@ if(isProduction){
               "api-key": process.env.BREVO_API_KEY,
               "content-type": "application/json",
             },
-          }
+          },
         );
         console.log(`✅ Email sent via Brevo API to ${to}`);
       } catch (err) {
-        console.error("❌ Brevo API failed:", err.response?.data || err.message);
+        console.error(
+          "❌ Brevo API failed:",
+          err.response?.data || err.message,
+        );
       }
-    }
-  }
-}
-else {
- 
+    },
+  };
+} else {
   transporter = nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
     port: 587,
@@ -69,7 +82,6 @@ else {
     tls: { rejectUnauthorized: false },
   });
 
-  
   transporter.verify((error, success) => {
     if (error) {
       console.error("❌ SMTP connection failed:", error);
@@ -79,4 +91,4 @@ else {
   });
 }
 
-module.exports ={ transporter,sendEmail};
+module.exports = { transporter, sendEmail };

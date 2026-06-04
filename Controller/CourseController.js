@@ -48,6 +48,7 @@ exports.createCourse = async (req, res) => {
 
     //need instructor details
     const instructorDetails = await User.findById(userId);
+    
     console.log("Instructor detals", instructorDetails);
     if (!instructorDetails) {
       return res.status(400).json({
@@ -318,12 +319,6 @@ exports.getFullCourseDetails = async (req, res) => {
       })
       .exec();
 
-    // let courseProgressCount = await CourseProgress.find({
-    //   userId:userId,
-    //   courseID:courseId
-    // })
-    // console.log("courseProgressCount : ", courseProgressCount)
-
     if (!courseDetails) {
       return res.status(400).json({
         success: false,
@@ -351,7 +346,13 @@ exports.getInstructorCourse = async (req, res) => {
 
     const instructorCourse = await Course.find({
       instructor: InstructorId,
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).populate({
+        path: "courseContent",
+        populate: {
+          path: "subSection",
+        },
+      })
+      .exec();
 
     return res.status(200).json({
       success: true,
@@ -460,7 +461,8 @@ exports.getFullEnrolledCourseDetails = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "CourseDetails fetched success",
-      data: { courseDetails,
+      data: { 
+        courseDetails,
         totalDuration,
         completedVideos: courseProgressCount?.completedVideo
           
@@ -474,3 +476,4 @@ exports.getFullEnrolledCourseDetails = async (req, res) => {
     });
   }
 };
+

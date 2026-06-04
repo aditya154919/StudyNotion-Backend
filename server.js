@@ -6,6 +6,7 @@ const cloudinary = require("./config/cloudinary")
 const userRoute = require("./routes/userRoute");
 const tagRoute = require("./routes/tagRoute")
 const Payment = require("./routes/PaymentRoute")
+const Stream = require("./routes/streamRoute")
 const cors = require("cors")
 const fileupload = require("express-fileupload")
 
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://study-notion-frontend-zeta.vercel.app",
 ];
 
@@ -48,6 +50,7 @@ connect.connect();
 app.use("/api/v1",userRoute);
 app.use("/api/v1/tag/",tagRoute)
 app.use("/api/v1/payment",Payment)
+app.use("/api/v1/stream",Stream)
 app.use("/",(req,res) =>{
     res.send("HEllo")
 })

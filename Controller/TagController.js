@@ -84,18 +84,7 @@ exports.tagPageDetals = async (req, res) => {
     //different tag courses
     const differentTagCourses = await Tag.find({ _id: { $ne: tagId } });
 
-    // let differentCourses = await Tag.findOne(
-    //   differentTagCourses[getRandomInt(differentTagCourses.length)]._id
-    // )
-    //   .populate({
-    //     path: "course",
-    //     populate: {
-    //       path: "instructor",
-    //       path: "ratingAndReview",
-    //     },
-    //   })
-    //   .exec();
-
+    
     const randomTag =
       differentTagCourses[getRandomInt(differentTagCourses.length)];
 

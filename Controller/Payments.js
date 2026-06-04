@@ -9,9 +9,9 @@ const {
   courseEnrollmentEmail,
 } = require("../mail-template/courseEnrollementEmial");
 const { paymentSuccessEmail } = require("../mail-template/paymentSuccess");
-const { instructorEnrollmentEmail } = require("../mail-template/instructorenrollmail");
-
-
+const {
+  instructorEnrollmentEmail,
+} = require("../mail-template/instructorenrollmail");
 
 exports.capturePayment = async (req, res) => {
   try {
@@ -21,7 +21,6 @@ exports.capturePayment = async (req, res) => {
     console.log("hello", courses);
     const userId = req.userId;
 
-    
     if (!courses || !Array.isArray(courses) || courses.length === 0) {
       return res.status(400).json({
         success: false,
@@ -52,14 +51,18 @@ exports.capturePayment = async (req, res) => {
       totalAmount += course.price;
     }
 
-   
     const options = {
       amount: totalAmount * 100, // paise
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
 
-    const paymentResponse = await instance.orders.create(options);
+    const paymentResponse = await instance.orders.create(options); //return an object
+    //This order is used by frontend to complete payment
+    // Node.js sends request to Razorpay server
+    // Razorpay creates an order
+    // Razorpay returns response
+    // You store it in paymentResponse
 
     return res.status(200).json({
       success: true,
@@ -96,11 +99,22 @@ exports.verifyPayment = async (req, res) => {
     });
   }
 
-  let body = razorpay_order_id + "|" + razorpay_payment_id;
+  let body = razorpay_order_id + "|" + razorpay_payment_id; // This exact format is required by Razorpay
   const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
+    .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY) // HMAC = Hash-based Message Authentication Code. “Create a secure fingerprint of data using a secret key”
     .update(body.toString())
     .digest("hex");
+
+  // 1. User pays
+  // 2. Razorpay returns payment details
+  // 3. Backend recreates signature
+  // 4. Compare signatures
+  // 5. If valid:
+  //      → store in DB
+  //      → enroll user
+  //      → send email
+  // 6. Else:
+  //      → reject
 
   if (expectedSignature == razorpay_signature) {
     //enroll student
@@ -116,73 +130,6 @@ exports.verifyPayment = async (req, res) => {
   });
 };
 
-// const enrollStudents = async (courses, userId, res) => {
-//   if (!courses || !userId) {
-//     return res.status(400).json({
-//       success: false,
-//       message: "Please provide required details",
-//     });
-//   }
-//   for (const courseId of courses) {
-//     //find the course and enrolled it
-//     try {
-//       const enrollcourse = await Course.findByIdAndUpdate(
-//         courseId,
-//         {
-//           $push: {
-//             studentEnrolled: userId,
-//           },
-//         },
-//         { new: true }
-//       );
-
-//       if (!enrollcourse) {
-//         return res.status(400).json({
-//           success: false,
-//           message: "Course not found",
-//         });
-//       }
-
-//       //fond the student and add the course to their list
-//       const enrolledStudent = await User.findByIdAndUpdate(
-//         userId,
-//         {
-//           $push: {
-//             courses: courseId,
-//           },
-//         },
-//         { new: true }
-//       );
-
-//       const courseProgress = await courseProgress.create({
-//         courseID:courseId,
-//         userId:userId,
-//         completedVideo:[]
-//       })
-
-//       //sent mail to student
-//       const emailres = await mailSender(
-//         enrollStudents.email,
-//         `Successfully Enrolled into ${
-//           (enrollcourse.courseName,
-//           courseEnrollmentEmail(
-//             enrollcourse.courseName,
-//             `${enrolledStudent.firstName}`
-//           ))
-//         }`
-//       );
-
-//       console.log("Email sent successfully", emailres.response);
-//     } catch (error) {
-//       console.log("Error",error.message);
-//       return res.status(500).json({
-//         success:false,
-//         message:"Server error during enrolled student"
-//       })
-//     }
-//   }
-// };
-
 const enrollStudents = async (courses, userId, res) => {
   try {
     if (!Array.isArray(courses) || !userId) {
@@ -192,9 +139,8 @@ const enrollStudents = async (courses, userId, res) => {
       });
     }
 
-    
     const courseIds = courses.map((item) =>
-      typeof item === "string" ? item : item.courseId
+      typeof item === "string" ? item : item.courseId,
     );
 
     for (const courseId of courseIds) {
@@ -205,16 +151,14 @@ const enrollStudents = async (courses, userId, res) => {
       const enrolledCourse = await Course.findByIdAndUpdate(
         courseId,
         { $addToSet: { studentEnrolled: userId } },
-        { new: true }
+        { new: true },
       );
 
       if (!enrolledCourse) {
         throw new Error("Course not found");
       }
 
-      
-
-   const courseProgress  = await CourseProgress.create({
+      const courseProgress = await CourseProgress.create({
         courseID: courseId,
         userId,
         completedVideo: [],
@@ -222,17 +166,17 @@ const enrollStudents = async (courses, userId, res) => {
 
       const enrolledStudent = await User.findByIdAndUpdate(
         userId,
-        { $push: { courses: courseId,courseProgress:courseProgress._id } },
-        { new: true }
+        { $push: { courses: courseId, courseProgress: courseProgress._id } },
+        { new: true },
       );
-      console.log("Enrolled student: ", enrolledStudent)
+      console.log("Enrolled student: ", enrolledStudent);
       await mailSender.sendEmail(
         enrolledStudent.email,
         "Successfully Enrolled",
         courseEnrollmentEmail(
           enrolledCourse.courseName,
-          enrolledStudent.firstName
-        )
+          enrolledStudent.firstName,
+        ),
       );
     }
 
@@ -272,8 +216,8 @@ exports.sendMailSuccsee = async (req, res) => {
         `${enrolledStudent.firstName} ${enrolledStudent.lastName}`,
         amount / 100,
         orderId,
-        paymentId
-      )
+        paymentId,
+      ),
     );
 
     await mailSender.sendEmail(
@@ -282,8 +226,8 @@ exports.sendMailSuccsee = async (req, res) => {
       instructorEnrollmentEmail(
         course.courseName,
         `${enrolledStudent.firstName} ${enrolledStudent.lastName}`,
-        amount / 100
-      )
+        amount / 100,
+      ),
     );
   } catch (error) {
     console.log("error in sending mail", error);

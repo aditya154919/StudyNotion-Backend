@@ -12,6 +12,9 @@ const subSectionsSchema = new mongoose.Schema({
    },
    vedioUrl:{
     type:String,
+   },
+   notes:{
+      type:String
    }
 })
 

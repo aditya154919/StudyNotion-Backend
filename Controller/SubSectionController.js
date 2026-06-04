@@ -7,9 +7,11 @@ exports.createSubSection = async (req, res) => {
   try {
     const { title, description, sectionId } = req.body;
     const vedio = req.files.vedio;
+    const notes = req.files.notes;
     console.log("Formdata", req.body);
     console.log("Vedio", vedio);
-    if (!title || !description || !sectionId || !vedio) {
+    console.log("Notes", notes);
+    if (!title || !description || !sectionId || !vedio || !notes) {
       return res.status(400).json({
         success: false,
         message: "All filed required",
@@ -20,12 +22,17 @@ exports.createSubSection = async (req, res) => {
       vedio.tempFilePath,
       process.env.FOLDER_NAME
     );
+    const NotesUploder = await uploadImageToCloudinary(
+      notes.tempFilePath,
+      process.env.FOLDER_NAME
+    )
 
     const subSection = await SubSection.create({
       title: title,
       timeDuration: `${vedioUploader.duration}`,
       description: description,
       vedioUrl: vedioUploader.secure_url,
+      notes:NotesUploder.secure_url
     });
 
     //update section
@@ -145,3 +152,24 @@ exports.deleteSubSection = async (req, res) => {
     });
   }
 };
+
+exports.addNotes = async(req,res)=>{
+  try {
+    const {} = req.body;
+
+    const notes = req.files.notes;
+   
+     console.log("SectionId",sectionId);
+     console.log("Notes",notes);
+     if(!sectionId || !notes){
+      return res.status(404).json({
+        success:false,
+        message:"All field required"
+      })
+     }
+
+     const UpdatedSubSection = await SubSection.fin
+  } catch (error) {
+    
+  }
+}

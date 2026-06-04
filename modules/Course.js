@@ -20,7 +20,7 @@ const courseSchema = new mongoose.Schema({
         {
         type:mongoose.Schema.Types.ObjectId,
         ref:"Section",
-         default:null
+        default:null
         }
     ],
     ratingAndReview:[

@@ -13,12 +13,12 @@ exports.authMiddleware = async(req,res,next)=>{
             })
         }
         const token = authHeader.split(" ")[1];
-        console.log("toen",token)
+        // console.log("toen",token)
         let decode;
         try {
-            console.log("aaaaa")
+            // console.log("aaaaa")
             decode = jwt.verify(token,process.env.SECRET_KEY);
-            console.log("frdt")
+            // console.log("frdt")
         } catch (error) {
             if(error.name === "TokenExpiredError"){
                 return res.status(400).json({

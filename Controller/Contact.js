@@ -1,28 +1,35 @@
 const { contactUsEmail } = require("../mail-template/contactus");
-const mailSender = require("../utils/mailSender");
+const mailQueue = require("../queues/emailQueue");
 
+exports.contactUs = async (req, res) => {
+  try {
+    const { email, firstName, lastName, message, phoneNo, countryCode } =
+      req.body;
+    console.log("Body", req.body);
 
-exports.contactUs = async(req,res)=>{
-    try {
-        const{email,firstName,lastName,message,phoneNo,countryCode} = req.body;
-        console.log("Body",req.body);
-        
-        const emailRes = await mailSender(
-            email,
-         "Your Data send successfully",
-          contactUsEmail(email, firstName, lastName, message, phoneNo, countryCode)
-        )
-        console.log("Emailres",emailRes)
-        return res.json({
+    const emailRes = await mailQueue.add("constact-mail-queue",{
+      to:email,
+      subject:"You email is sent to StudyNotion team",
+      htmlContent:contactUsEmail(email, firstName, lastName, message, phoneNo, countryCode),
+    })
+
+     await mailQueue.add("constact-mail-queue",{
+      to:"adoitya154919@gmail.com",
+      subject:"Contact",
+      htmlContent:contactUsEmail(email, firstName, lastName, message, phoneNo, countryCode),
+    })
+    console.log("Emailres", emailRes);
+    return res.json({
       success: true,
       message: "Email send successfully",
-    })
-    } catch (error) {
-        console.log("Error", error)
-    console.log("Error message :", error.message)
+    });
+  } catch (error) {
+    console.log("Error", error);
+    console.log("Error message :", error.message);
     return res.json({
       success: false,
       message: "Something went wrong...",
-    })
-    }
-}
+    });
+  }
+};
+

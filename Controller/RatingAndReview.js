@@ -1,15 +1,12 @@
 const Course = require("../modules/Course");
 const RatingAndReview = require("../modules/RatingAndReview");
 const mongoose = require("mongoose");
+const {getCache,setCache} = require("../utils/cache");
 
 exports.createRatingAndReview = async (req, res) => {
   try {
     const userId = req.userId;
     const { courseId, rating, review } = req.body;
-    // console.log("Rating", req.body);
-    // console.log("user", req.userId);
-    // console.log("Type of userId:", typeof req.userId);
-    // const user = await User.findById(userId);
     const courseDetails = await Course.findOne({
       _id: courseId,
       studentEnrolled: { $in: [userId] },
@@ -68,10 +65,8 @@ exports.createRatingAndReview = async (req, res) => {
 
 exports.getAverageRating = async (req, res) => {
   try {
-    //get course id
     const { courseId } = req.body;
 
-    //db call and aggregate and avg rating
     const result = await RatingAndReview.aggregate([
       {
         $match: {
@@ -111,6 +106,21 @@ exports.getAverageRating = async (req, res) => {
 
 exports.getAllRating = async (req, res) => {
   try {
+
+    const cachekey = `RAR:all`;
+    const cachedRAR = await getCache(cachekey);
+
+    if(cachedRAR!=null){
+      console.log("Cached-Hit-RAR");
+      return res.status(200).json({
+        success:true,
+        message:"All Tag fetchde",
+        source:"Redis",
+        data:cachedRAR
+      })
+    }
+
+    
     const allReviews = await RatingAndReview.find({})
       .sort({ rating: "descending" })
       .populate({
@@ -123,9 +133,12 @@ exports.getAllRating = async (req, res) => {
       })
       .exec();
 
+      await setCache(cachekey,allReviews,600);
+
     return res.status(200).json({
       success: true,
       message: "All revies get success",
+      source:"MongoDB",
       data: allReviews,
     });
   } catch (error) {

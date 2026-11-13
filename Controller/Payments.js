@@ -13,18 +13,31 @@ const {
   instructorEnrollmentEmail,
 } = require("../mail-template/instructorenrollmail");
 
+const mailQueue = require("../queues/emailQueue");
+
 exports.capturePayment = async (req, res) => {
   try {
-    // const { courses } = req.body;
-    const courses = req.body.map((item) => item.courseId);
-
-    console.log("hello", courses);
-    const userId = req.userId;
-
-    if (!courses || !Array.isArray(courses) || courses.length === 0) {
+    const requestedCourses = Array.isArray(req.body)
+      ? req.body
+      : req.body?.courses;
+    if (!Array.isArray(requestedCourses) || requestedCourses.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Courses array is required",
+      });
+    }
+
+    const courses = requestedCourses.map((item) =>
+      typeof item === "string" ? item : item?.courseId || item?._id,
+    );
+    const userId = req.userId;
+
+    if (
+      courses.some((courseId) => !mongoose.Types.ObjectId.isValid(courseId))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more course IDs are invalid",
       });
     }
 
@@ -41,10 +54,30 @@ exports.capturePayment = async (req, res) => {
         });
       }
 
+      if (course.status !== "Published") {
+        return res.status(409).json({
+          success: false,
+          message: "This course is not available for purchase",
+        });
+      }
+
       if (course.studentEnrolled.includes(uid)) {
         return res.status(400).json({
           success: false,
           message: "You are already enrolled ",
+        });
+      }
+      if (
+        course.cancelledEnrollments.some(
+          (enrollment) =>
+            enrollment.student.toString() === uid.toString() &&
+            !enrollment.reinstatedAt,
+        )
+      ) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Your access to this course was revoked. Contact eTech support if you believe this was a mistake.",
         });
       }
 
@@ -99,34 +132,30 @@ exports.verifyPayment = async (req, res) => {
     });
   }
 
-  let body = razorpay_order_id + "|" + razorpay_payment_id; // This exact format is required by Razorpay
+  const body = razorpay_order_id + "|" + razorpay_payment_id;
   const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY) // HMAC = Hash-based Message Authentication Code. “Create a secure fingerprint of data using a secret key”
+    .createHmac("sha256", process.env.RAZORPAY_SECRET_KEY)
     .update(body.toString())
     .digest("hex");
 
-  // 1. User pays
-  // 2. Razorpay returns payment details
-  // 3. Backend recreates signature
-  // 4. Compare signatures
-  // 5. If valid:
-  //      → store in DB
-  //      → enroll user
-  //      → send email
-  // 6. Else:
-  //      → reject
-
-  if (expectedSignature == razorpay_signature) {
-    //enroll student
-    enrollStudents(courses, userId, res);
-    return res.status(200).json({
-      success: true,
-      message: "Payment verified",
+  const receivedSignature = Buffer.from(razorpay_signature, "hex");
+  const calculatedSignature = Buffer.from(expectedSignature, "hex");
+  if (
+    receivedSignature.length !== calculatedSignature.length ||
+    !crypto.timingSafeEqual(receivedSignature, calculatedSignature)
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Payment signature verification failed",
     });
   }
+
+  const enrolled = await enrollStudents(courses, userId, res);
+  if (!enrolled) return;
+
   return res.status(200).json({
-    success: false,
-    message: "Payment failed",
+    success: true,
+    message: "Payment verified and course access is ready",
   });
 };
 
@@ -140,53 +169,112 @@ const enrollStudents = async (courses, userId, res) => {
     }
 
     const courseIds = courses.map((item) =>
-      typeof item === "string" ? item : item.courseId,
+      typeof item === "string" ? item : item?.courseId || item?._id,
     );
+    if (
+      courseIds.length === 0 ||
+      courseIds.some((courseId) => !mongoose.Types.ObjectId.isValid(courseId))
+    ) {
+      throw new Error("One or more course IDs are invalid");
+    }
+
+    const enrolledCourses = [];
+    const enrolledStudent = await User.findById(userId);
+    if (!enrolledStudent) {
+      throw new Error("Student account could not be found");
+    }
 
     for (const courseId of courseIds) {
-      if (!mongoose.Types.ObjectId.isValid(courseId)) {
-        throw new Error("Invalid course ID");
+      let enrolledCourse = await Course.findById(courseId);
+      if (!enrolledCourse || enrolledCourse.status !== "Published") {
+        throw new Error("Course is no longer available for enrollment");
       }
 
-      const enrolledCourse = await Course.findByIdAndUpdate(
-        courseId,
-        { $addToSet: { studentEnrolled: userId } },
-        { new: true },
+      const alreadyEnrolled = enrolledCourse.studentEnrolled.some(
+        (studentId) => studentId.toString() === userId.toString(),
       );
-
-      if (!enrolledCourse) {
-        throw new Error("Course not found");
+      const enrollmentCancelled = enrolledCourse.cancelledEnrollments.some(
+        (enrollment) =>
+          enrollment.student.toString() === userId.toString() &&
+          !enrollment.reinstatedAt,
+      );
+      if (enrollmentCancelled) {
+        throw new Error("Your access to this course has been cancelled");
       }
 
-      const courseProgress = await CourseProgress.create({
+      if (!alreadyEnrolled) {
+        enrolledCourse = await Course.findOneAndUpdate(
+          {
+            _id: courseId,
+            status: "Published",
+            studentEnrolled: { $ne: userId },
+            cancelledEnrollments: {
+              $not: {
+                $elemMatch: { student: userId, reinstatedAt: null },
+              },
+            },
+          },
+          { $addToSet: { studentEnrolled: userId } },
+          { new: true },
+        );
+        if (!enrolledCourse) {
+          enrolledCourse = await Course.findById(courseId);
+          const concurrentEnrollment = enrolledCourse?.studentEnrolled.some(
+            (studentId) => studentId.toString() === userId.toString(),
+          );
+          if (!concurrentEnrollment) {
+            throw new Error("Course is no longer available for enrollment");
+          }
+        }
+      }
+
+      let courseProgress = await CourseProgress.findOne({
         courseID: courseId,
         userId,
-        completedVideo: [],
       });
+      if (!courseProgress) {
+        courseProgress = await CourseProgress.create({
+          courseID: courseId,
+          userId,
+          completedVideo: [],
+        });
+      }
 
-      const enrolledStudent = await User.findByIdAndUpdate(
-        userId,
-        { $push: { courses: courseId, courseProgress: courseProgress._id } },
-        { new: true },
-      );
-      console.log("Enrolled student: ", enrolledStudent);
-      await mailSender.sendEmail(
-        enrolledStudent.email,
-        "Successfully Enrolled",
-        courseEnrollmentEmail(
-          enrolledCourse.courseName,
-          enrolledStudent.firstName,
-        ),
-      );
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: {
+          courses: courseId,
+          courseProgress: courseProgress._id,
+        },
+      });
+      enrolledCourses.push(enrolledCourse);
+    }
+
+    for (const course of enrolledCourses) {
+      try {
+        await mailQueue.add("Enrollment-course-queue", {
+          to: enrolledStudent.email,
+          subject: "Course Enrollment Success",
+          htmlContent: courseEnrollmentEmail(
+            course.courseName,
+            enrolledStudent.firstName,
+          ),
+        });
+      } catch (emailError) {
+        console.error(
+          `Enrollment email failed for course ${course._id}:`,
+          emailError,
+        );
+      }
     }
 
     return true;
   } catch (error) {
     console.error("Enroll error:", error.message);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: error.message || "Enrollment failed",
     });
+    return false;
   }
 };
 
@@ -209,26 +297,26 @@ exports.sendMailSuccsee = async (req, res) => {
     const course = enrolledStudent.courses[0];
     const instructor = course.instructor;
 
-    await mailSender.sendEmail(
-      enrolledStudent.email,
-      `Payment Recived`,
-      paymentSuccessEmail(
+    await mailQueue.add("payment-received-queue", {
+      to: enrolledStudent.email,
+      subject: "Payment Recived",
+      htmlContent: paymentSuccessEmail(
         `${enrolledStudent.firstName} ${enrolledStudent.lastName}`,
         amount / 100,
         orderId,
         paymentId,
       ),
-    );
+    });
 
-    await mailSender.sendEmail(
-      instructor.email,
-      "New Student Enrolled 🎉",
-      instructorEnrollmentEmail(
+    await mailQueue.add("payment-received-queue", {
+      to: instructor.email,
+      subject: "New Student Enrolled 🎉",
+      htmlContent: instructorEnrollmentEmail(
         course.courseName,
         `${enrolledStudent.firstName} ${enrolledStudent.lastName}`,
         amount / 100,
       ),
-    );
+    });
   } catch (error) {
     console.log("error in sending mail", error);
     return res

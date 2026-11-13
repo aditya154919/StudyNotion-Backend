@@ -1,11 +1,10 @@
 const express = require("express");
 const Tag = require("../modules/Tag");
+const Course = require("../modules/Course");
+const mongoose = require("mongoose");
 const ratingAndReview = require("../modules/RatingAndReview");
 const path = require("path");
-
-function getRandomInt(max) {
-  return Math.floor(Math.random() * max);
-}
+const { getCache, setCache, deleteCache } = require("../utils/cache");
 
 exports.createTag = async (req, res) => {
   try {
@@ -40,11 +39,27 @@ exports.createTag = async (req, res) => {
 
 exports.getAllTags = async (req, res) => {
   try {
+    const cachekey = `tag:all`;
+    const cachedtag = await getCache(cachekey);
+
+    if (cachedtag != null) {
+      console.log("Cached-Hit-Tag");
+      return res.status(200).json({
+        success: true,
+        message: "All Tags are fetched from cached",
+        source: "Redis",
+        data: cachedtag,
+      });
+    }
+    console.log("Tags Cache MISS - MongoDB");
+
     const allTags = await Tag.find({}, { name: true, description: true });
-    // console.log("TAGS",allTags)
+
+    await setCache(cachekey, allTags, 600);
     return res.status(200).json({
-      success: false,
+      success: true,
       message: "All tags found",
+      source: "MongoDB",
       data: allTags,
     });
   } catch (error) {
@@ -58,12 +73,31 @@ exports.getAllTags = async (req, res) => {
 
 exports.tagPageDetals = async (req, res) => {
   try {
-    // console.log("sd dsf",req.body)
     const { tagId } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(tagId)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid category is required.",
+      });
+    }
+
+    const cachekey = `tagPage:details:${tagId}`;
+    const cachedtagPage = await getCache(cachekey);
+
+    if (cachedtagPage != null) {
+      console.log("Cached-Hit-TagPage");
+      return res.status(200).json({
+        success: true,
+        source: "Redis",
+        data: cachedtagPage,
+      });
+    }
 
     const selectedTagCourse = await Tag.findById(tagId)
       .populate({
         path: "course",
+        select: "-cancelledEnrollments",
+        match: { status: "Published" },
         populate: [{ path: "ratingAndReview" }, { path: "instructor" }],
       })
       .exec();
@@ -75,28 +109,37 @@ exports.tagPageDetals = async (req, res) => {
       });
     }
 
-    if (selectedTagCourse.course.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found ",
-      });
-    }
-    //different tag courses
-    const differentTagCourses = await Tag.find({ _id: { $ne: tagId } });
 
-    
-    const randomTag =
-      differentTagCourses[getRandomInt(differentTagCourses.length)];
+    const relatedCategoryIds = await Course.distinct("tag", {
+      status: "Published",
+      tag: { $ne: tagId },
+    });
+    const randomCategoryId =
+      relatedCategoryIds.length > 0
+        ? relatedCategoryIds[
+            Math.floor(Math.random() * relatedCategoryIds.length)
+          ]
+        : null;
+    const differentCourses = randomCategoryId
+      ? await Tag.findById(randomCategoryId)
+          .populate({
+            path: "course",
+            select: "-cancelledEnrollments",
+            match: { status: "Published" },
+            populate: [{ path: "ratingAndReview" }, { path: "instructor" }],
+          })
+          .exec()
+      : null;
 
-    const differentCourses = await Tag.findById(randomTag._id)
-      .populate({
-        path: "course",
-        populate: [{ path: "ratingAndReview" }, { path: "instructor" }],
-      })
-      .exec();
+      const alldetails = {
+        selectedTagCourse,differentCourses
+      }
+
+      await setCache(cachekey,alldetails,600);
 
     return res.status(200).json({
       success: true,
+      source:"MongoDB",
       data: {
         selectedTagCourse,
         differentCourses,
@@ -111,72 +154,4 @@ exports.tagPageDetals = async (req, res) => {
   }
 };
 
-// exports.tagPageDetals = async (req, res) => {
-//   try {
-//     // ✅ GET query param
-//     const { tagId } = req.body;
 
-//     if (!tagId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Tag ID is missing",
-//       });
-//     }
-
-//     // ✅ Selected tag courses
-//     const selectedTagCourse = await Tag.findById(tagId)
-//       .populate({
-//         path: "course",
-//         match: { status: "Published" },
-//         populate: "ratingAndReview",
-//       })
-//       .exec();
-
-//     if (!selectedTagCourse) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Category not found",
-//       });
-//     }
-
-//     if (!selectedTagCourse.course || selectedTagCourse.course.length === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "No courses found for this category",
-//       });
-//     }
-
-//     // ✅ Get other tags
-//     const differentTagCourses = await Tag.find({ _id: { $ne: tagId } });
-
-//     let differentCourses = null;
-
-//     if (differentTagCourses.length > 0) {
-//       const randomTag =
-//         differentTagCourses[
-//           Math.floor(Math.random() * differentTagCourses.length)
-//         ];
-
-//       differentCourses = await Tag.findById(randomTag._id)
-//         .populate({
-//           path: "course",
-//           match: { status: "Published" },
-//         })
-//         .exec();
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       data: {
-//         selectedTagCourse,
-//         differentCourses,
-//       },
-//     });
-//   } catch (error) {
-//     console.log("Error", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error during getting tag based courses",
-//     });
-//   }
-// };

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const streamSchema = new mongoose.Schema({
   title: {
@@ -6,7 +6,10 @@ const streamSchema = new mongoose.Schema({
     required: true,
   },
 
-  description: String,
+  description: {
+    type: String,
+    required: true,
+  },
 
   course: {
     type: mongoose.Schema.Types.ObjectId,
@@ -23,16 +26,26 @@ const streamSchema = new mongoose.Schema({
   instructor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
+    required: true,
   },
 
-  roomId: String,
+  roomId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
 
-  egressId: String,
   scheduledFor: Date,
-
   startedAt: Date,
-
   endedAt: Date,
+  recordingEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  notifyStudents: {
+    type: Boolean,
+    default: false,
+  },
 
   status: {
     type: String,
@@ -40,9 +53,11 @@ const streamSchema = new mongoose.Schema({
     default: "scheduled",
   },
 
-
   recordingUrl: String,
+  recordingSubSection: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "SubSection",
+  },
 });
 
-
-module.exports = mongoose.model("Stream",streamSchema)
+module.exports = mongoose.model("Stream", streamSchema);

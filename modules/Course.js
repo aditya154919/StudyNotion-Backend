@@ -49,7 +49,36 @@ const courseSchema = new mongoose.Schema({
             
         }
     ],  
-    
+    cancelledEnrollments:[{
+        student:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User",
+            required:true,
+        },
+        cancelledBy:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User",
+            required:true,
+        },
+        cancelledAt:{
+            type:Date,
+            default:Date.now,
+        },
+        reinstatedAt:{
+            type:Date,
+            default:null,
+        },
+        reinstatedBy:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User",
+            default:null,
+        },
+        reason:{
+            type:String,
+            required:true,
+            maxlength:500,
+        },
+    }],
     
     status:{
         type:String,

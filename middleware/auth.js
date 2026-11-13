@@ -56,16 +56,13 @@ exports.authMiddleware = async(req,res,next)=>{
 
 exports.isStudents = async(req,res,next) =>{
     try {
-        const {email} = req.user;
-        const user = await User.findOne({email});
-
-        if(user.accountType !== "Student"){
-            res.status(400).json({
+        if(req.user.accountType !== "Student"){
+            return res.status(403).json({
                 success:false,
                 message:"This is protected route for student only"
             })
         }
-        next()
+        return next()
     } catch (error) {
         console.log("Error", error);
         return res.status(500).json({
@@ -78,16 +75,13 @@ exports.isStudents = async(req,res,next) =>{
 
 exports.isInstructor = async(req,res,next) =>{
     try {
-        const {email} = req.user;
-        const user = await User.findOne({email});
-
-        if(user.accountType !== "Instructor"){
-            res.status(400).json({
+        if(req.user.accountType !== "Instructor"){
+            return res.status(403).json({
                 success:false,
                 message:"This is protected route for Instructor only"
             })
         }
-        next()
+        return next()
     } catch (error) {
         console.log("Error", error);
         return res.status(500).json({

@@ -1,4 +1,5 @@
 const CourseProgress = require("../modules/CourseProgress");
+const Course = require("../modules/Course");
 const SubSection = require("../modules/SubSection");
 
 
@@ -7,6 +8,18 @@ exports.updatedCourseProgress = async(req,res)=>{
     // console.log("hello",req.body)
     const userId = req.userId;
     try {
+        const course = await Course.findOne({
+            _id: courseId,
+            studentEnrolled: userId,
+            status: "Published",
+        });
+        if(!course){
+            return res.status(403).json({
+                success:false,
+                message:"Course access is unavailable"
+            })
+        }
+
         //check valid subsection
         const subSection = await SubSection.findById(subSectionId);
         if(!subSection){
@@ -21,9 +34,10 @@ exports.updatedCourseProgress = async(req,res)=>{
             userId:userId
         })
         if(!courseProgress){
-            return res.status(404).json({
-                success:false,
-                message:"Course progress does not exist"
+            courseProgress = new CourseProgress({
+                courseID: courseId,
+                userId,
+                completedVideo: [subSectionId],
             })
         }
         else{

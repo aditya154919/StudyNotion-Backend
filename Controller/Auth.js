@@ -61,7 +61,11 @@ exports.signUp = async (req, res) => {
       expiresIn: "7d",
     });
 
-    mailSender.sendEmail(email, "Verifify Your Account", verify(token));
+    await emailQueue.add("Account-verify-queue",{
+      to:email,
+      subject: "Verifify Your Account",
+      htmlContent:verify(token)
+    } );
     user.token = token;
     await user.save();
 

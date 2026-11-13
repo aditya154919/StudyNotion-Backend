@@ -7,14 +7,14 @@ exports.contactUs = async (req, res) => {
       req.body;
     console.log("Body", req.body);
 
-    const emailRes = await mailQueue.add("constact-mail-queue",{
+    const emailRes = await mailQueue.add("contact-mail-queue",{
       to:email,
       subject:"You email is sent to StudyNotion team",
       htmlContent:contactUsEmail(email, firstName, lastName, message, phoneNo, countryCode),
     })
 
-     await mailQueue.add("constact-mail-queue",{
-      to:"adoitya154919@gmail.com",
+     await mailQueue.add("contact-mail-queue",{
+      to:"aditya154919@gmail.com",
       subject:"Contact",
       htmlContent:contactUsEmail(email, firstName, lastName, message, phoneNo, countryCode),
     })
